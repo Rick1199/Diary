@@ -436,12 +436,14 @@
             apiKey: "AIzaSyCZ-2rb0RWSm5Xd8dJo7CYQmYx2mYeKjLk",
             authDomain: "diary-6940d.firebaseapp.com",
             projectId: "diary-6940d",
-            storageBucket: "diary-6940d.firebasestorage.app",
-            messagingSenderId: "154878639302"
+            storageBucket: "diary-6940d.appspot.com",
+            messagingSenderId: "154878639302",
             appId: "1:154878639302:web:6f0bb20a09c3c03e51abc7",
             measurementId: "G-KH2ESWH9FZ"
         };
-        firebase.initializeApp(firebaseConfig);
+        
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
 
@@ -485,10 +487,13 @@
             
             // Check auth state
             auth.onAuthStateChanged((user) => {
+                console.log("Auth state changed. User:", user);
                 if (user) {
+                    console.log("User logged in:", user.email);
                     currentUser = user;
                     showDiaryApp();
                 } else {
+                    console.log("No user logged in");
                     showLoginForm();
                 }
             });
@@ -556,8 +561,10 @@
                 
                 showLoader();
                 try {
-                    await auth.signInWithEmailAndPassword(email, password);
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                    console.log("Login successful:", userCredential.user);
                 } catch (error) {
+                    console.error("Login error:", error);
                     errorElement.textContent = error.message;
                 }
                 hideLoader();
@@ -625,6 +632,7 @@
             }
             
             function showDiaryApp() {
+                console.log("Showing diary app");
                 loginContainer.style.display = 'none';
                 diaryContainer.style.display = 'block';
                 userEmailSpan.textContent = currentUser.email;
@@ -634,7 +642,10 @@
             
             // Diary functions
             function formatDateForInput(date) {
-                return date.toISOString().split('T')[0];
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
             
             function formatDateForDisplay(date) {

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Personal Diary</title>
+    <style>
+        body {
+            background-color: #f5e9d5;
+            font-family: 'Times New Roman', Times, serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png');
+        }
+
+        .login-container, .diary-container {
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+            background-color: #fff9e6;
+            border: 1px solid #d4c9a8;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+        }
+
+        .diary-page {
+            background-color: #fff9e6;
+            position: relative;
+            min-height: 600px;
+            margin-bottom: 20px;
+        }
+
+        .diary-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50px;
+            width: 2px;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .date-header {
+            font-family: 'Old English Text MT', 'Times New Roman', serif;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 1px solid #d4c9a8;
+            padding-bottom: 10px;
+        }
+
+        .entry-content {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            min-height: 300px;
+        }
+
+        .finance-section {
+            margin-top: 30px;
+            border-top: 1px dashed #d4c9a8;
+            padding-top: 20px;
+        }
+
+        .finance-title {
+            font-family: 'Old English Text MT', 'Times New Roman', serif;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .finance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .finance-table th {
+            background-color: #8b7355;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .finance-table td {
+            padding: 8px;
+            border-bottom: 1px solid #d4c9a8;
+        }
+
+        .finance-table input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #d4c9a8;
+            background-color: #fff9e6;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .finance-totals {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .add-row {
+            background-color: #8b7355;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .editable {
+            background-color: #fff9e6;
+            border: 1px dashed #d4c9a8;
+            padding: 10px;
+        }
+
+        .non-editable {
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .save-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: #8b7355;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-family: 'Times New Roman', Times, serif;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .save-btn:hover {
+            background-color: #6b5a43;
+        }
+
+        .date-picker {
+            margin-bottom: 20px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .date-picker input {
+            padding: 5px;
+            font-family: inherit;
+            border: 1px solid #d4c9a8;
+            background-color: #fff9e6;
+        }
+
+        .date-picker button {
+            padding: 5px 10px;
+            background-color: #8b7355;
+            color: white;
+            border: none;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 8px 15px;
+            background-color: #d4c9a8;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background-color: #8b7355;
+            color: white;
+        }
+
+        /* Login styles */
+        .auth-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .auth-form h2 {
+            font-family: 'Old English Text MT', 'Times New Roman', serif;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d4c9a8;
+            background-color: #fff9e6;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: #8b7355;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Times New Roman', Times, serif;
+            margin-top: 10px;
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .auth-link a {
+            color: #8b7355;
+            text-decoration: none;
+        }
+
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #8b7355;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="login-container">
+        <div class="auth-form" id="login-form">
+            <h2>Sign In</h2>
+            <div class="error-message" id="login-error"></div>
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button class="auth-btn" id="login-btn">Sign In</button>
+            <div class="auth-link">
+                <a href="#" id="forgot-password-link">Forgot password?</a> | 
+                <a href="#" id="register-link">Create account</a>
+            </div>
+        </div>
+
+        <div class="auth-form" id="register-form" style="display: none;">
+            <h2>Create Account</h2>
+            <div class="error-message" id="register-error"></div>
+            <div class="form-group">
+                <label for="register-email">Email</label>
+                <input type="email" id="register-email" required>
+            </div>
+            <div class="form-group">
+                <label for="register-password">Password (min 6 characters)</label>
+                <input type="password" id="register-password" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label for="register-confirm">Confirm Password</label>
+                <input type="password" id="register-confirm" required>
+            </div>
+            <button class="auth-btn" id="register-btn">Create Account</button>
+            <div class="auth-link">
+                <a href="#" id="login-link">Back to Sign In</a>
+            </div>
+        </div>
+
+        <div class="auth-form" id="reset-form" style="display: none;">
+            <h2>Reset Password</h2>
+            <div class="error-message" id="reset-error"></div>
+            <div class="form-group">
+                <label for="reset-email">Email</label>
+                <input type="email" id="reset-email" required>
+            </div>
+            <button class="auth-btn" id="reset-btn">Send Reset Link</button>
+            <div class="auth-link">
+                <a href="#" id="reset-login-link">Back to Sign In</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="diary-container" id="diary-container" style="display: none;">
+        <div class="user-info">
+            <span id="user-email"></span>
+            <button class="logout-btn" id="logout-btn">Logout</button>
+        </div>
+        
+        <div class="date-picker">
+            <label for="entry-date">Select Date: </label>
+            <input type="date" id="entry-date">
+            <button id="go-to-date">Go</button>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab active" id="diary-tab">Diary</div>
+            <div class="tab" id="finance-tab">Finances</div>
+        </div>
+        
+        <div class="diary-page" id="diary-content">
+            <div class="date-header" id="display-date">June 29, 2025</div>
+            <div class="entry-content" id="entry-text" contenteditable="true">Dear Diary,&#13;&#10;&#13;&#10;Today I...</div>
+            <button class="save-btn" id="save-entry">Save Entry</button>
+        </div>
+        
+        <div class="diary-page" id="finance-content" style="display: none;">
+            <div class="date-header" id="finance-display-date">June 29, 2025</div>
+            <div class="finance-section">
+                <div class="finance-title">Daily Finances</div>
+                <table class="finance-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="finance-entries">
+                        <tr>
+                            <td><input type="text" class="finance-desc" placeholder="e.g. Groceries"></td>
+                            <td>
+                                <select class="finance-category">
+                                    <option value="Food">Food</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </td>
+                            <td><input type="number" class="finance-amount" placeholder="0.00" step="0.01"></td>
+                            <td>
+                                <select class="finance-type">
+                                    <option value="expense">Expense</option>
+                                    <option value="income">Income</option>
+                                </select>
+                            </td>
+                            <td><button class="remove-row">×</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="add-row" id="add-finance-row">+ Add Entry</button>
+                
+                <div class="finance-totals">
+                    <div>Total Income: <span id="total-income">$0.00</span></div>
+                    <div>Total Expenses: <span id="total-expense">$0.00</span></div>
+                    <div>Net Balance: <span id="net-balance">$0.00</span></div>
+                </div>
+            </div>
+            <button class="save-btn" id="save-finance">Save Finances</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auth elements
+            const loginContainer = document.getElementById('login-container');
+            const diaryContainer = document.getElementById('diary-container');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const resetForm = document.getElementById('reset-form');
+            const loginBtn = document.getElementById('login-btn');
+            const registerBtn = document.getElementById('register-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const registerLink = document.getElementById('register-link');
+            const loginLink = document.getElementById('login-link');
+            const forgotPasswordLink = document.getElementById('forgot-password-link');
+            const resetLoginLink = document.getElementById('reset-login-link');
+            const logoutBtn = document.getElementById('logout-btn');
+            const userEmailSpan = document.getElementById('user-email');
+            
+            // Diary elements
+            const entryDateInput = document.getElementById('entry-date');
+            const goToDateBtn = document.getElementById('go-to-date');
+            const displayDate = document.getElementById('display-date');
+            const financeDisplayDate = document.getElementById('finance-display-date');
+            const entryText = document.getElementById('entry-text');
+            const saveBtn = document.getElementById('save-entry');
+            const saveFinanceBtn = document.getElementById('save-finance');
+            const diaryTab = document.getElementById('diary-tab');
+            const financeTab = document.getElementById('finance-tab');
+            const diaryContent = document.getElementById('diary-content');
+            const financeContent = document.getElementById('finance-content');
+            const addFinanceRowBtn = document.getElementById('add-finance-row');
+            const financeEntries = document.getElementById('finance-entries');
+            
+            // Current user
+            let currentUser = null;
+            
+            // Check if user is already logged in
+            checkAuthState();
+            
+            // Auth event listeners
+            loginBtn.addEventListener('click', loginUser);
+            registerBtn.addEventListener('click', registerUser);
+            resetBtn.addEventListener('click', resetPassword);
+            registerLink.addEventListener('click', showRegisterForm);
+            loginLink.addEventListener('click', showLoginForm);
+            forgotPasswordLink.addEventListener('click', showResetForm);
+            resetLoginLink.addEventListener('click', showLoginForm);
+            logoutBtn.addEventListener('click', logoutUser);
+            
+            // Diary event listeners
+            goToDateBtn.addEventListener('click', function() {
+                const selectedDate = new Date(entryDateInput.value);
+                const selectedDateStr = formatDateForInput(selectedDate);
+                
+                updateDisplayDate(selectedDate);
+                checkEditability(selectedDate);
+                loadEntry(selectedDateStr);
+                loadFinanceEntries(selectedDateStr);
+            });
+            
+            saveBtn.addEventListener('click', saveDiaryEntry);
+            saveFinanceBtn.addEventListener('click', saveFinanceEntries);
+            addFinanceRowBtn.addEventListener('click', addFinanceRow);
+            
+            financeEntries.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-row')) {
+                    e.target.closest('tr').remove();
+                    calculateTotals();
+                }
+            });
+            
+            financeEntries.addEventListener('input', function(e) {
+                if (e.target.classList.contains('finance-amount') || 
+                    e.target.classList.contains('finance-type')) {
+                    calculateTotals();
+                }
+            });
+            
+            diaryTab.addEventListener('click', function() {
+                diaryTab.classList.add('active');
+                financeTab.classList.remove('active');
+                diaryContent.style.display = 'block';
+                financeContent.style.display = 'none';
+            });
+            
+            financeTab.addEventListener('click', function() {
+                financeTab.classList.add('active');
+                diaryTab.classList.remove('active');
+                financeContent.style.display = 'block';
+                diaryContent.style.display = 'none';
+            });
+            
+            // Auth functions
+            function checkAuthState() {
+                const user = JSON.parse(localStorage.getItem('currentUser'));
+                if (user) {
+                    currentUser = user;
+                    showDiaryApp();
+                }
+            }
+            
+            function loginUser() {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const errorElement = document.getElementById('login-error');
+                
+                // Simple validation
+                if (!email || !password) {
+                    errorElement.textContent = 'Please enter both email and password';
+                    return;
+                }
+                
+                // Check if user exists
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (user) {
+                    currentUser = user;
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    showDiaryApp();
+                } else {
+                    errorElement.textContent = 'Invalid email or password';
+                }
+            }
+            
+            function registerUser() {
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('register-confirm').value;
+                const errorElement = document.getElementById('register-error');
+                
+                // Validation
+                if (!email || !password || !confirmPassword) {
+                    errorElement.textContent = 'Please fill in all fields';
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    errorElement.textContent = 'Password must be at least 6 characters';
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    errorElement.textContent = 'Passwords do not match';
+                    return;
+                }
+                
+                // Check if user already exists
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                if (users.some(u => u.email === email)) {
+                    errorElement.textContent = 'Email already registered';
+                    return;
+                }
+                
+                // Create new user
+                const newUser = { email, password };
+                users.push(newUser);
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Log in the new user
+                currentUser = newUser;
+                localStorage.setItem('currentUser', JSON.stringify(newUser));
+                showDiaryApp();
+            }
+            
+            function resetPassword() {
+                const email = document.getElementById('reset-email').value;
+                const errorElement = document.getElementById('reset-error');
+                
+                if (!email) {
+                    errorElement.textContent = 'Please enter your email';
+                    return;
+                }
+                
+                // In a real app, you would send an email here
+                // For this demo, we'll just show a message
+                errorElement.textContent = 'Password reset link would be sent to your email in a real application';
+            }
+            
+            function logoutUser() {
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                showLoginForm();
+                loginContainer.style.display = 'block';
+                diaryContainer.style.display = 'none';
+            }
+            
+            function showRegisterForm() {
+                loginForm.style.display = 'none';
+                resetForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                document.getElementById('register-error').textContent = '';
+            }
+            
+            function showLoginForm() {
+                registerForm.style.display = 'none';
+                resetForm.style.display = 'none';
+                loginForm.style.display = 'block';
+                document.getElementById('login-error').textContent = '';
+            }
+            
+            function showResetForm() {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'none';
+                resetForm.style.display = 'block';
+                document.getElementById('reset-error').textContent = '';
+            }
+            
+            function showDiaryApp() {
+                loginContainer.style.display = 'none';
+                diaryContainer.style.display = 'block';
+                userEmailSpan.textContent = currentUser.email;
+                
+                // Set today's date as default
+                const today = new Date();
+                const todayStr = formatDateForInput(today);
+                entryDateInput.value = todayStr;
+                updateDisplayDate(today);
+                
+                // Check if entry is for today to determine editability
+                checkEditability(today);
+                
+                // Load any saved entry for today
+                loadEntry(todayStr);
+                loadFinanceEntries(todayStr);
+            }
+            
+            // Diary functions
+            function formatDateForInput(date) {
+                return date.toISOString().split('T')[0];
+            }
+            
+            function formatDateForDisplay(date) {
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                return date.toLocaleDateString('en-US', options);
+            }
+            
+            function updateDisplayDate(date) {
+                const dateStr = formatDateForDisplay(date);
+                displayDate.textContent = dateStr;
+                financeDisplayDate.textContent = dateStr;
+            }
+            
+            function checkEditability(date) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                date.setHours(0, 0, 0, 0);
+                
+                if (date.getTime() === today.getTime()) {
+                    entryText.contentEditable = 'true';
+                    entryText.classList.add('editable');
+                    entryText.classList.remove('non-editable');
+                    saveBtn.style.display = 'block';
+                    saveFinanceBtn.style.display = 'block';
+                    addFinanceRowBtn.style.display = 'block';
+                } else {
+                    entryText.contentEditable = 'false';
+                    entryText.classList.add('non-editable');
+                    entryText.classList.remove('editable');
+                    saveBtn.style.display = 'none';
+                    saveFinanceBtn.style.display = 'none';
+                    addFinanceRowBtn.style.display = 'none';
+                }
+            }
+            
+            function loadEntry(dateStr) {
+                if (!currentUser) return;
+                
+                const userEntries = JSON.parse(localStorage.getItem(`diary-entries-${currentUser.email}`)) || {};
+                const savedEntry = userEntries[dateStr];
+                
+                if (savedEntry) {
+                    entryText.innerHTML = savedEntry.replace(/\n/g, '<br>');
+                } else {
+                    if (dateStr === formatDateForInput(new Date())) {
+                        entryText.innerHTML = 'Dear Diary,<br><br>Today I...';
+                    } else {
+                        entryText.innerHTML = 'No entry for this date.';
+                    }
+                }
+            }
+            
+            function saveDiaryEntry() {
+                if (!currentUser) return;
+                
+                const currentDate = entryDateInput.value;
+                const entry = entryText.innerText;
+                
+                const userEntries = JSON.parse(localStorage.getItem(`diary-entries-${currentUser.email}`)) || {};
+                userEntries[currentDate] = entry;
+                localStorage.setItem(`diary-entries-${currentUser.email}`, JSON.stringify(userEntries));
+                
+                alert('Diary entry saved successfully!');
+            }
+            
+            function loadFinanceEntries(dateStr) {
+                if (!currentUser) return;
+                
+                const userFinanceEntries = JSON.parse(localStorage.getItem(`finance-entries-${currentUser.email}`)) || {};
+                const savedFinance = userFinanceEntries[dateStr];
+                
+                financeEntries.innerHTML = '';
+                
+                if (savedFinance) {
+                    savedFinance.forEach(entry => {
+                        addFinanceRow(entry);
+                    });
+                } else {
+                    // Add one empty row for today's date
+                    if (dateStr === formatDateForInput(new Date())) {
+                        addFinanceRow();
+                    }
+                }
+                
+                calculateTotals();
+            }
+            
+            function saveFinanceEntries() {
+                if (!currentUser) return;
+                
+                const currentDate = entryDateInput.value;
+                const financeData = getFinanceData();
+                
+                const userFinanceEntries = JSON.parse(localStorage.getItem(`finance-entries-${currentUser.email}`)) || {};
+                userFinanceEntries[currentDate] = financeData;
+                localStorage.setItem(`finance-entries-${currentUser.email}`, JSON.stringify(userFinanceEntries));
+                
+                alert('Finance entries saved successfully!');
+            }
+            
+            function addFinanceRow(data = {}) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" class="finance-desc" placeholder="e.g. Groceries" value="${data.description || ''}"></td>
+                    <td>
+                        <select class="finance-category">
+                            <option value="Food" ${data.category === 'Food' ? 'selected' : ''}>Food</option>
+                            <option value="Transport" ${data.category === 'Transport' ? 'selected' : ''}>Transport</option>
+                            <option value="Entertainment" ${data.category === 'Entertainment' ? 'selected' : ''}>Entertainment</option>
+                            <option value="Utilities" ${data.category === 'Utilities' ? 'selected' : ''}>Utilities</option>
+                            <option value="Shopping" ${data.category === 'Shopping' ? 'selected' : ''}>Shopping</option>
+                            <option value="Other" ${data.category === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                    </td>
+                    <td><input type="number" class="finance-amount" placeholder="0.00" step="0.01" value="${data.amount || ''}"></td>
+                    <td>
+                        <select class="finance-type">
+                            <option value="expense" ${data.type === 'expense' ? 'selected' : ''}>Expense</option>
+                            <option value="income" ${data.type === 'income' ? 'selected' : ''}>Income</option>
+                        </select>
+                    </td>
+                    <td><button class="remove-row">×</button></td>
+                `;
+                financeEntries.appendChild(row);
+            }
+            
+            function getFinanceData() {
+                const rows = financeEntries.querySelectorAll('tr');
+                const data = [];
+                
+                rows.forEach(row => {
+                    data.push({
+                        description: row.querySelector('.finance-desc').value,
+                        category: row.querySelector('.finance-category').value,
+                        amount: parseFloat(row.querySelector('.finance-amount').value) || 0,
+                        type: row.querySelector('.finance-type').value
+                    });
+                });
+                
+                return data;
+            }
+            
+            function calculateTotals() {
+                const data = getFinanceData();
+                let totalIncome = 0;
+                let totalExpense = 0;
+                
+                data.forEach(entry => {
+                    if (entry.type === 'income') {
+                        totalIncome += entry.amount;
+                    } else {
+                        totalExpense += entry.amount;
+                    }
+                });
+                
+                document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
+                document.getElementById('total-expense').textContent = `$${totalExpense.toFixed(2)}`;
+                document.getElementById('net-balance').textContent = `$${(totalIncome - totalExpense).toFixed(2)}`;
+            }
+        });
+    </script>
+</body>
+</html>

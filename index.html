@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Personal Diary</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <style>
         body {
             background-color: #f5e9d5;
@@ -181,7 +185,7 @@
             color: white;
         }
 
-        /* Login styles */
+        /* Auth styles */
         .auth-form {
             max-width: 400px;
             margin: 0 auto;
@@ -256,6 +260,35 @@
             text-decoration: underline;
             padding: 0;
             margin-left: 5px;
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #8b7355;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .backup-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .import-label {
+            cursor: pointer;
+            padding: 5px 10px;
+            background-color: #d4c9a8;
+            color: #333;
         }
     </style>
 </head>
@@ -378,16 +411,39 @@
                 <button class="add-row" id="add-finance-row">+ Add Entry</button>
                 
                 <div class="finance-totals">
-                    <div>Total Income: <span id="total-income">$0.00</span></div>
-                    <div>Total Expenses: <span id="total-expense">$0.00</span></div>
-                    <div>Net Balance: <span id="net-balance">$0.00</span></div>
+                    <div>Total Income: <span id="total-income">₹0.00</span></div>
+                    <div>Total Expenses: <span id="total-expense">₹0.00</span></div>
+                    <div>Net Balance: <span id="net-balance">₹0.00</span></div>
                 </div>
             </div>
             <button class="save-btn" id="save-finance">Save Finances</button>
         </div>
+
+        <div class="backup-buttons">
+            <button class="auth-btn" id="export-btn">Export Data</button>
+            <label for="import-btn" class="import-label">
+                Import Data
+                <input type="file" id="import-btn" accept=".json" style="display:none;">
+            </label>
+        </div>
+
+        <div class="loader" id="loader"></div>
     </div>
 
     <script>
+        // Initialize Firebase (Replace with your config)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
         document.addEventListener('DOMContentLoaded', function() {
             // Auth elements
             const loginContainer = document.getElementById('login-container');
@@ -404,6 +460,8 @@
             const resetLoginLink = document.getElementById('reset-login-link');
             const logoutBtn = document.getElementById('logout-btn');
             const userEmailSpan = document.getElementById('user-email');
+            const exportBtn = document.getElementById('export-btn');
+            const importBtn = document.getElementById('import-btn');
             
             // Diary elements
             const entryDateInput = document.getElementById('entry-date');
@@ -419,12 +477,20 @@
             const financeContent = document.getElementById('finance-content');
             const addFinanceRowBtn = document.getElementById('add-finance-row');
             const financeEntries = document.getElementById('finance-entries');
+            const loader = document.getElementById('loader');
             
             // Current user
             let currentUser = null;
             
-            // Check if user is already logged in
-            checkAuthState();
+            // Check auth state
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    showDiaryApp();
+                } else {
+                    showLoginForm();
+                }
+            });
             
             // Auth event listeners
             loginBtn.addEventListener('click', loginUser);
@@ -435,18 +501,11 @@
             forgotPasswordLink.addEventListener('click', showResetForm);
             resetLoginLink.addEventListener('click', showLoginForm);
             logoutBtn.addEventListener('click', logoutUser);
+            exportBtn.addEventListener('click', exportData);
+            importBtn.addEventListener('change', importData);
             
             // Diary event listeners
-            goToDateBtn.addEventListener('click', function() {
-                const selectedDate = new Date(entryDateInput.value);
-                const selectedDateStr = formatDateForInput(selectedDate);
-                
-                updateDisplayDate(selectedDate);
-                checkEditability(selectedDate);
-                loadEntry(selectedDateStr);
-                loadFinanceEntries(selectedDateStr);
-            });
-            
+            goToDateBtn.addEventListener('click', loadSelectedDate);
             saveBtn.addEventListener('click', saveDiaryEntry);
             saveFinanceBtn.addEventListener('click', saveFinanceEntries);
             addFinanceRowBtn.addEventListener('click', addFinanceRow);
@@ -479,99 +538,66 @@
                 diaryContent.style.display = 'none';
             });
             
-            // Auth functions
-            function checkAuthState() {
-                const user = JSON.parse(localStorage.getItem('currentUser'));
-                if (user) {
-                    currentUser = user;
-                    showDiaryApp();
-                }
+            // Initialize with today's date
+            function initDate() {
+                const today = new Date();
+                const todayStr = formatDateForInput(today);
+                entryDateInput.value = todayStr;
+                updateDisplayDate(today);
+                checkEditability(today);
             }
             
-            function loginUser() {
+            // Auth functions
+            async function loginUser() {
                 const email = document.getElementById('login-email').value;
                 const password = document.getElementById('login-password').value;
                 const errorElement = document.getElementById('login-error');
                 
-                // Simple validation
-                if (!email || !password) {
-                    errorElement.textContent = 'Please enter both email and password';
-                    return;
+                showLoader();
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                } catch (error) {
+                    errorElement.textContent = error.message;
                 }
-                
-                // Check if user exists
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                const user = users.find(u => u.email === email && u.password === password);
-                
-                if (user) {
-                    currentUser = user;
-                    localStorage.setItem('currentUser', JSON.stringify(user));
-                    showDiaryApp();
-                } else {
-                    errorElement.textContent = 'Invalid email or password';
-                }
+                hideLoader();
             }
             
-            function registerUser() {
+            async function registerUser() {
                 const email = document.getElementById('register-email').value;
                 const password = document.getElementById('register-password').value;
                 const confirmPassword = document.getElementById('register-confirm').value;
                 const errorElement = document.getElementById('register-error');
-                
-                // Validation
-                if (!email || !password || !confirmPassword) {
-                    errorElement.textContent = 'Please fill in all fields';
-                    return;
-                }
-                
-                if (password.length < 6) {
-                    errorElement.textContent = 'Password must be at least 6 characters';
-                    return;
-                }
                 
                 if (password !== confirmPassword) {
                     errorElement.textContent = 'Passwords do not match';
                     return;
                 }
                 
-                // Check if user already exists
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                if (users.some(u => u.email === email)) {
-                    errorElement.textContent = 'Email already registered';
-                    return;
+                showLoader();
+                try {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                } catch (error) {
+                    errorElement.textContent = error.message;
                 }
-                
-                // Create new user
-                const newUser = { email, password };
-                users.push(newUser);
-                localStorage.setItem('users', JSON.stringify(users));
-                
-                // Log in the new user
-                currentUser = newUser;
-                localStorage.setItem('currentUser', JSON.stringify(newUser));
-                showDiaryApp();
+                hideLoader();
             }
             
-            function resetPassword() {
+            async function resetPassword() {
                 const email = document.getElementById('reset-email').value;
                 const errorElement = document.getElementById('reset-error');
                 
-                if (!email) {
-                    errorElement.textContent = 'Please enter your email';
-                    return;
+                showLoader();
+                try {
+                    await auth.sendPasswordResetEmail(email);
+                    errorElement.textContent = 'Password reset email sent!';
+                } catch (error) {
+                    errorElement.textContent = error.message;
                 }
-                
-                // In a real app, you would send an email here
-                // For this demo, we'll just show a message
-                errorElement.textContent = 'Password reset link would be sent to your email in a real application';
+                hideLoader();
             }
             
             function logoutUser() {
-                currentUser = null;
-                localStorage.removeItem('currentUser');
-                showLoginForm();
-                loginContainer.style.display = 'block';
-                diaryContainer.style.display = 'none';
+                auth.signOut();
             }
             
             function showRegisterForm() {
@@ -586,6 +612,8 @@
                 resetForm.style.display = 'none';
                 loginForm.style.display = 'block';
                 document.getElementById('login-error').textContent = '';
+                loginContainer.style.display = 'block';
+                diaryContainer.style.display = 'none';
             }
             
             function showResetForm() {
@@ -599,19 +627,8 @@
                 loginContainer.style.display = 'none';
                 diaryContainer.style.display = 'block';
                 userEmailSpan.textContent = currentUser.email;
-                
-                // Set today's date as default
-                const today = new Date();
-                const todayStr = formatDateForInput(today);
-                entryDateInput.value = todayStr;
-                updateDisplayDate(today);
-                
-                // Check if entry is for today to determine editability
-                checkEditability(today);
-                
-                // Load any saved entry for today
-                loadEntry(todayStr);
-                loadFinanceEntries(todayStr);
+                initDate();
+                loadSelectedDate();
             }
             
             // Diary functions
@@ -652,69 +669,116 @@
                 }
             }
             
-            function loadEntry(dateStr) {
-                if (!currentUser) return;
+            async function loadSelectedDate() {
+                const selectedDate = new Date(entryDateInput.value);
+                const selectedDateStr = formatDateForInput(selectedDate);
                 
-                const userEntries = JSON.parse(localStorage.getItem(`diary-entries-${currentUser.email}`)) || {};
-                const savedEntry = userEntries[dateStr];
-                
-                if (savedEntry) {
-                    entryText.innerHTML = savedEntry.replace(/\n/g, '<br>');
-                } else {
-                    if (dateStr === formatDateForInput(new Date())) {
-                        entryText.innerHTML = 'Dear Diary,<br><br>Today I...';
-                    } else {
-                        entryText.innerHTML = 'No entry for this date.';
-                    }
-                }
+                updateDisplayDate(selectedDate);
+                checkEditability(selectedDate);
+                await loadEntry(selectedDateStr);
+                await loadFinanceEntries(selectedDateStr);
             }
             
-            function saveDiaryEntry() {
+            async function loadEntry(dateStr) {
+                if (!currentUser) return;
+                
+                showLoader();
+                try {
+                    const doc = await db.collection('diaryEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .doc(dateStr)
+                        .get();
+                    
+                    if (doc.exists) {
+                        entryText.innerHTML = doc.data().content.replace(/\n/g, '<br>');
+                    } else {
+                        if (dateStr === formatDateForInput(new Date())) {
+                            entryText.innerHTML = 'Dear Diary,<br><br>Today I...';
+                        } else {
+                            entryText.innerHTML = 'No entry for this date.';
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error loading entry: ", error);
+                }
+                hideLoader();
+            }
+            
+            async function saveDiaryEntry() {
                 if (!currentUser) return;
                 
                 const currentDate = entryDateInput.value;
                 const entry = entryText.innerText;
                 
-                const userEntries = JSON.parse(localStorage.getItem(`diary-entries-${currentUser.email}`)) || {};
-                userEntries[currentDate] = entry;
-                localStorage.setItem(`diary-entries-${currentUser.email}`, JSON.stringify(userEntries));
-                
-                alert('Diary entry saved successfully!');
+                showLoader();
+                try {
+                    await db.collection('diaryEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .doc(currentDate)
+                        .set({
+                            content: entry,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    alert('Diary entry saved successfully!');
+                } catch (error) {
+                    console.error("Error saving entry: ", error);
+                    alert('Error saving entry!');
+                }
+                hideLoader();
             }
             
-            function loadFinanceEntries(dateStr) {
+            async function loadFinanceEntries(dateStr) {
                 if (!currentUser) return;
                 
-                const userFinanceEntries = JSON.parse(localStorage.getItem(`finance-entries-${currentUser.email}`)) || {};
-                const savedFinance = userFinanceEntries[dateStr];
-                
                 financeEntries.innerHTML = '';
-                
-                if (savedFinance) {
-                    savedFinance.forEach(entry => {
-                        addFinanceRow(entry);
-                    });
-                } else {
-                    // Add one empty row for today's date
-                    if (dateStr === formatDateForInput(new Date())) {
-                        addFinanceRow();
+                showLoader();
+                try {
+                    const snapshot = await db.collection('financeEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .doc(dateStr)
+                        .get();
+                    
+                    if (snapshot.exists) {
+                        snapshot.data().items.forEach(entry => {
+                            addFinanceRow(entry);
+                        });
+                    } else {
+                        if (dateStr === formatDateForInput(new Date())) {
+                            addFinanceRow();
+                        }
                     }
+                    calculateTotals();
+                } catch (error) {
+                    console.error("Error loading finance entries: ", error);
                 }
-                
-                calculateTotals();
+                hideLoader();
             }
             
-            function saveFinanceEntries() {
+            async function saveFinanceEntries() {
                 if (!currentUser) return;
                 
                 const currentDate = entryDateInput.value;
                 const financeData = getFinanceData();
                 
-                const userFinanceEntries = JSON.parse(localStorage.getItem(`finance-entries-${currentUser.email}`)) || {};
-                userFinanceEntries[currentDate] = financeData;
-                localStorage.setItem(`finance-entries-${currentUser.email}`, JSON.stringify(userFinanceEntries));
-                
-                alert('Finance entries saved successfully!');
+                showLoader();
+                try {
+                    await db.collection('financeEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .doc(currentDate)
+                        .set({
+                            items: financeData,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    alert('Finance entries saved successfully!');
+                } catch (error) {
+                    console.error("Error saving finance entries: ", error);
+                    alert('Error saving finance entries!');
+                }
+                hideLoader();
             }
             
             function addFinanceRow(data = {}) {
@@ -772,9 +836,111 @@
                     }
                 });
                 
-                document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
-                document.getElementById('total-expense').textContent = `$${totalExpense.toFixed(2)}`;
-                document.getElementById('net-balance').textContent = `$${(totalIncome - totalExpense).toFixed(2)}`;
+                document.getElementById('total-income').textContent = `₹${totalIncome.toFixed(2)}`;
+                document.getElementById('total-expense').textContent = `₹${totalExpense.toFixed(2)}`;
+                document.getElementById('net-balance').textContent = `₹${(totalIncome - totalExpense).toFixed(2)}`;
+            }
+            
+            // Backup functions
+            async function exportData() {
+                if (!currentUser) return;
+                
+                showLoader();
+                try {
+                    // Get all diary entries
+                    const diarySnapshot = await db.collection('diaryEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .get();
+                    
+                    const diaryData = {};
+                    diarySnapshot.forEach(doc => {
+                        diaryData[doc.id] = doc.data().content;
+                    });
+                    
+                    // Get all finance entries
+                    const financeSnapshot = await db.collection('financeEntries')
+                        .doc(currentUser.email)
+                        .collection('entries')
+                        .get();
+                    
+                    const financeData = {};
+                    financeSnapshot.forEach(doc => {
+                        financeData[doc.id] = doc.data().items;
+                    });
+                    
+                    // Combine data
+                    const allData = {
+                        diary: diaryData,
+                        finance: financeData,
+                        exportedAt: new Date().toISOString()
+                    };
+                    
+                    // Download as JSON file
+                    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `diary-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                } catch (error) {
+                    console.error("Error exporting data: ", error);
+                    alert('Error exporting data!');
+                }
+                hideLoader();
+            }
+            
+            async function importData(event) {
+                if (!currentUser) return;
+                
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        showLoader();
+                        // Import diary entries
+                        if (data.diary) {
+                            for (const [date, content] of Object.entries(data.diary)) {
+                                await db.collection('diaryEntries')
+                                    .doc(currentUser.email)
+                                    .collection('entries')
+                                    .doc(date)
+                                    .set({ content });
+                            }
+                        }
+                        
+                        // Import finance entries
+                        if (data.finance) {
+                            for (const [date, items] of Object.entries(data.finance)) {
+                                await db.collection('financeEntries')
+                                    .doc(currentUser.email)
+                                    .collection('entries')
+                                    .doc(date)
+                                    .set({ items });
+                            }
+                        }
+                        
+                        alert('Data imported successfully!');
+                        loadSelectedDate();
+                    } catch (error) {
+                        console.error("Error importing data: ", error);
+                        alert('Error importing data!');
+                    }
+                    hideLoader();
+                };
+                reader.readAsText(file);
+            }
+            
+            function showLoader() {
+                loader.style.display = 'block';
+            }
+            
+            function hideLoader() {
+                loader.style.display = 'none';
             }
         });
     </script>
